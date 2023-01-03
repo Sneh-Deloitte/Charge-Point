@@ -50,16 +50,15 @@
 <body>
 <h1>Simple OCPP 1.6 Chargebox Simulator</h1>
 <select style="display:none;"><option value="">OCPP-J1.6</option></select>
-<label>Central Station</label><input id="CP" type="text" placeholder="Id Station" value="ws://127.0.0.1:9000/steve/websocket/CentralSystemService/42">
-<label>Tag</label><input id="TAG" type="text" placeholder="Tag" value="12">
-<label>Connector Id</label><input id="connectorId" type="text" placeholder="ConnectorId" value=6>
-<label>Expiry Date Time</label>
+<label>Central Station</label><input id="CP" type="text" placeholder="Id Station" value="ws://127.0.0.1:9000/steve/websocket/CentralSystemService/1,1,Tesla">
+<label>Tag</label><input id="TAG" type="text" placeholder="Tag" value="HqqlnQfUvT">
+<label>Connector Id</label><input id="connectorId" type="text" placeholder="ConnectorId" value=1>
+<!-- <label>Current Time</label>
             <input 
                 id="expiryDateTime"
                 type="datetime"
                 placeholder="Expiry Date Time"
-                value=2019-04-12T23:20:50.52Z
-            />
+                            /> -->
 <h2>Actions</h2>
 <button id="connect">Connect</button>
 <button id="send">Authorize</button>
@@ -68,9 +67,14 @@
 <button id="heartbeat">Heartbeat</button>
 <!-- <button id="reserve">Reserve Now</button> -->
 <label>Meter value</label><input id="metervalue" type="text" placeholder="Meter value" value="1">
+
 <button id="mv">Send Meter Values</button>
-<!-- <button id="status">Status Notification</button>
-<button id="data_transfer">Data Tranfer</button> -->
+<select name="errorCode" id="error">
+    <option value="NoError">NoError</option>
+    <option value="HighTemperature">HighTemperature</option>
+  </select>
+<button id="status">Status Notification</button>
+<!-- <button id="data_transfer">Data Tranfer</button> -->
 
 <div>
     <span class="indicator" id="red" >____</span>
@@ -354,7 +358,7 @@
             "meterType": "AVT NQC-ACDC",
             "meterSerialNumber": "avt.001.13.1.01"
         }]);
-
+        console.log(BN);
         logMsg('ws connected');
 
         _websocket.send(BN);
@@ -409,19 +413,20 @@
             send_heartbeat();
         });
 
-        // $('#status').click(function () {
-        //     sessionStorage.setItem('LastAction', "StatusNotification");
-        //     var SN = JSON.stringify([2, id, "StatusNotification", {
-        //         "connectorId": 2,
-        //         "status": "Available",
-        //         "errorCode": "NoError",
-        //         "info": "",
-        //         "timestamp": formatDate(new Date()),
-        //         "vendorId": "",
-        //         "vendorErrorCode": ""
-        //     }]);
-        //     _websocket.send(SN);
-        // });
+        $('#status').click(function () {
+            sessionStorage.setItem('LastAction', "StatusNotification");
+            var timesRun = 0;
+            var SD = JSON.stringify([2, id, "StatusNotification", {
+                "connectorId": $("#connectorId").val(),
+                "status": "Available",
+                "errorCode": $("#error").val(),
+                "info": "",
+                "timestamp": formatDate(new Date()),
+                "vendorId": "",
+                "vendorErrorCode": ""
+            }]);
+            _websocket.send(SD);
+        });
 
         // $('#data_transfer').click(function () {
         //     sessionStorage.setItem('LastAction', "DataTransfer");
