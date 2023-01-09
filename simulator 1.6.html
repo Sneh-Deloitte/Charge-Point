@@ -19,6 +19,13 @@
             padding: 5px 0;
             border: none;
         }
+        button:disabled,
+            button[disabled]{
+            background: #FFBE6A;
+            color: #fff;
+            padding: 5px 0;
+            border: none;
+            }
 
         ul {
             background: #000;
@@ -44,6 +51,7 @@
         #yellow {
             background-color: yellow;
         }
+
     </style>
 </head>
 
@@ -51,7 +59,7 @@
 <h1>Simple OCPP 1.6 Chargebox Simulator</h1>
 <select style="display:none;"><option value="">OCPP-J1.6</option></select>
 <label>Central Station</label><input id="CP" type="text" placeholder="Id Station" value="ws://127.0.0.1:9000/steve/websocket/CentralSystemService/1,1,Tesla">
-<label>Tag</label><input id="TAG" type="text" placeholder="Tag" value="HqqlnQfUvT">
+<label>Tag</label><input id="TAG" type="text" placeholder="Tag" value="GX8eeEhS7t">
 <label>Connector Id</label><input id="connectorId" type="text" placeholder="ConnectorId" value=1>
 <!-- <label>Current Time</label>
             <input 
@@ -59,11 +67,13 @@
                 type="datetime"
                 placeholder="Expiry Date Time"
                             /> -->
+<label>Meter Stop</label><input id="meterStop" type="number" placeholder="Meter Values" value=1>
+<label>Reservation</label><input id="reservation" type="text" placeholder="reservation" value=1>
+
 <h2>Actions</h2>
 <button id="connect">Connect</button>
-<button id="send">Authorize</button>
-<!-- <button id="start">Start Transaction</button>
-<button id="stop">Stop Transaction</button> -->
+<button id="send" >Authorize</button> 
+
 <button id="heartbeat">Heartbeat</button>
 <!-- <button id="reserve">Reserve Now</button> -->
 <label>Meter value</label><input id="metervalue" type="text" placeholder="Meter value" value="1">
@@ -75,6 +85,8 @@
   </select>
 <button id="status">Status Notification</button>
 <!-- <button id="data_transfer">Data Tranfer</button> -->
+<button id="start" disabled = true>Start Transaction</button>
+<button id="stop" disabled = true>Stop Transaction</button>
 
 <div>
     <span class="indicator" id="red" >____</span>
@@ -91,7 +103,8 @@
     var id = randomId();
     var _websocket = null;
     var connector_locked = false;
-
+    // var disableStart = true;
+    // var disableStop = true;
     function formatDate(date) {
         var day = String(date.getDate());
         if (day.length <2){
@@ -158,19 +171,38 @@
                 if (ddata[0] === 3) {
                     la = getLastAction();
                     console.log(la);
-
+                    var status ="";
+                    var checkStart = false;
                     if (la == "startTransaction"){
-
+                        checkStart= true;
                         ddata = ddata[2];
+                        console.log("start",ddata);
                         logMsg("Data exchange successful!");
                         var array = $.map(ddata, function (value, index) {
                             return [value];
                         });
                         var TransactionId = (array[0]);
+                        var idTagInfo = (array[1]);
                         sessionStorage.setItem('TransactionId', TransactionId);
 
+                        logMsg("Response: " + JSON.stringify(idTagInfo));
                     }
+                    else if (la== "Authorize"){
+
+                        var data = ddata[2];
+                        console.log("Auth",data);
+                        logMsg("Authorize successful!");
+                        var array = $.map(data, function (value, index) {
+                            return [value];
+                        });
+
+                        var status = (array[1]);
+                    }
+                    // else if (la== "stopTransaction"){
+                    //     checkStart =false;
+                    // }
                     logMsg("Response: " + JSON.stringify(ddata[2]));
+                    
               
                 }
                 else if (la == "ReserveNow"){
@@ -265,6 +297,8 @@
         }
     }
 
+  
+
     function logMsg(err) {
         console.log(err);
         $('#console').append('<li>' + err + '</li>');
@@ -276,57 +310,39 @@
         _websocket.send(Auth);
     }
 
-    // function startTransaction(){
-    //     sessionStorage.setItem('LastAction', "startTransaction");
-    //     $('.indicator').hide();
-    //     $('#green').show();
-    //     connector_locked = true;
-    //     logMsg("Connector status changed to: " + connector_locked);
-    //     var strtT = JSON.stringify([2, id, "StartTransaction", {
-    //         "connectorId": 4,
-    //         "idTag": $("#TAG").val(),
-    //         "timestamp": formatDate(new Date()),
-    //         "meterStart": 0,
-    //         "reservationId": 1
-    //     }]);
-    //     _websocket.send(strtT);
-    // }
-//////////////////////////////////////////////////////////////////
-    // function reserveNow(){
-    //     sessionStorage.setItem('LastAction', "ReserveNow");
-    //       console.log(sessionStorage.getItem('LastAction'));
-    //       $("#yellow").show();
-    //       var re = JSON.stringify([2,
-    //         id,
-    //         "ReserveNow",
-    //         {
-    //           "connectorId":4,
-    //           "expiryDate": $("#expiryDateTime").val(),
-    //           "idTag": $('#TAG').val(),
-    //           "reservationId": 1,
-              
-    //         },
-    //       ]);
-    //       _websocket.send(re);
-    //     }
+    function startTransaction(){
+        sessionStorage.setItem('LastAction', "startTransaction");
+        $('.indicator').hide();
+        $('#green').show();
+        connector_locked = true;
+        logMsg("Connector status changed to: " + connector_locked);
+        var strtT = JSON.stringify([2, id, "StartTransaction", {
+            "connectorId": $("connectorId").val(),
+            "idTag": $("#TAG").val(),
+            "timestamp": formatDate(new Date()),
+            "meterStart": $("meterValue").val(),
+            "reservationId": $("reservation").val()
+        }]);
 
-/////////////////////////////////////////////////////////////////////
+            _websocket.send(strtT);
 
-    // function stopTransaction(transaction_id = false){
-    //     sessionStorage.setItem('LastAction', "stopTransaction");
-    //     transaction_id == false ? ssid = sessionStorage.getItem('TransactionId') : ssid = transaction_id;
-    //     $('.indicator').hide();
-    //     connector_locked = false;
-    //     logMsg("Connector status changed to: " + connector_locked);
-    //     $('#yellow').show();
-    //     var stpT = JSON.stringify([2, id, "StopTransaction",{
-    //         "transactionId": ssid,
-    //         "idTag": $("#TAG").val(),
-    //         "timestamp": formatDate(new Date()),
-    //         "meterStop": 20
-    //     }]);
-    //     _websocket.send(stpT);
-    // }
+    }
+
+    function stopTransaction(transaction_id = false){
+        sessionStorage.setItem('LastAction', "stopTransaction");
+        transaction_id == false ? ssid = sessionStorage.getItem('TransactionId') : ssid = transaction_id;
+        $('.indicator').hide();
+        connector_locked = false;
+        logMsg("Connector status changed to: " + connector_locked);
+        $('#yellow').show();
+        var stpT = JSON.stringify([2, id, "StopTransaction",{
+            "transactionId": ssid,
+            "idTag": $("#TAG").val(),
+            "timestamp": formatDate(new Date()),
+            "meterStop": $("meterStop").val()
+        }]);
+            _websocket.send(stpT);
+    }
 
     function handleData(data, request = false){
         var lastAction = getLastAction();
@@ -388,15 +404,18 @@
 
         $('#send').click(function () {
             Authorize();
+            document.getElementById("start").disabled = false;
         });
 
-        // $('#start').click(function () {
-        //     startTransaction();
-        // });
+        $('#start').click(function () {
 
-        // $('#stop').click(function () {
-        //     stopTransaction();
-        // });
+            startTransaction();
+            document.getElementById("stop").disabled = false;
+        });
+
+        $('#stop').click(function () {
+            stopTransaction();
+        });
         
         // $("#reserve").click(function(){
         //     reserveNow();
